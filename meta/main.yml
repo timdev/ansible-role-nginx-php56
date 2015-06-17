@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: Tim Lieberman <tim@timdev.com>
+  description: Ensure nginx and PHP 5.6 (from dotdeb.org) are installed on debian wheezy host.
+  license: MIT
+  min_ansible_version: 1.9
+dependencies: []

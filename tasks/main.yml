@@ -1,0 +1,57 @@
+---
+
+- name: Ensure nginx and php56 packages are installed
+  apt: pkg={{ item }} state=latest
+  with_items:
+    - nginx
+    - php5-fpm
+    - php5-cli
+    - php5-apcu
+    - php5-curl
+    - php5-gd
+    - php5-intl
+    - php5-mcrypt
+    - php5-memcached
+    - php5-mysqlnd
+    - php5-pspell
+    - php5-redis
+    - php5-sqlite
+    - php5-xsl
+    - php5-dev
+    - php5-imap
+
+
+- name: Ensure main nginx config is correct
+  template: src=etc/nginx/nginx.conf dest=/etc/nginx/nginx.conf
+  notify: restart nginx
+
+- name: Ensure default site's configuration is valid
+  template: src=etc/nginx/sites-available/default dest=/etc/nginx/sites-available/default
+  notify: restart nginx
+
+- name: Configure php5-fpm
+  template: src=etc/php5/fpm/php.ini dest=/etc/php5/fpm/php.ini
+  notify: restart php5-fpm
+
+- name: Ensure n.php is droped in webroot
+  lineinfile: create=yes dest=/var/www/html/n.php line="<?php phpinfo();" mode=0644 owner=root state=present
+
+- name: Ensure composer.phar is installed
+  shell: curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin creates="{{ nginx_php56_composer_path}}/composer.phar"
+  tags: composer
+
+- name: Ensure composer.phar executable
+  file: path={{ nginx_php56_composer_path}}/composer.phar mode=a+x state=file
+  tags: composer
+
+- name: Ensure composer -> composer.phar symlink
+  file: state=link src="{{ nginx_php56_composer_path }}/composer.phar" dest="{{ nginx_php56_composer_path }}/composer"
+  tags: composer
+
+# @todo - check mtime and only update composer if it's more than N days out of date.
+
+- name: Ensure composer is up-to-date
+  command: composer self-update
+  register: composer_self_update_result
+  changed_when: "'You are already using' not in composer_self_update_result.stderr"
+  tags: composer
